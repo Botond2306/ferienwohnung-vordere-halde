@@ -10,12 +10,16 @@ import About from "./pages/About";
 import Booking from "./pages/Booking";
 import Impressum from "./pages/Impressum";
 import NotFound from "./pages/NotFound";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Analytics } from "@vercel/analytics/react";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <SpeedInsights />
+      <Analytics />
       <Toaster />
       <Sonner />
       <BrowserRouter>
