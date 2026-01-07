@@ -35,8 +35,11 @@ jobs:
           set -e
           url="${SITE_URL%/}/_vercel/speed-insights/script.js"
           echo "Checking $url"
-          status=$(curl -s -o /dev/null -w "%{http_code}" "$url" || true)
-          echo "HTTP status: $status"
+          # Follow redirects (-L) and report final status + effective URL
+          status_and_url=$(curl -s -o /dev/null -w "%{http_code} %{url_effective}" -L "$url" || true)
+          status=$(echo "$status_and_url" | awk '{print $1}')
+          effective=$(echo "$status_and_url" | awk '{print $2}')
+          echo "HTTP status: $status (final URL: $effective)"
           if [ "$status" -ne 200 ]; then
             echo "Speed Insights script not reachable: $url (HTTP $status)"; exit 1
           fi
@@ -46,8 +49,11 @@ jobs:
           set -e
           url="${SITE_URL%/}/_vercel/insights/script.js"
           echo "Checking $url"
-          status=$(curl -s -o /dev/null -w "%{http_code}" "$url" || true)
-          echo "HTTP status: $status"
+          # Follow redirects (-L) and report final status + effective URL
+          status_and_url=$(curl -s -o /dev/null -w "%{http_code} %{url_effective}" -L "$url" || true)
+          status=$(echo "$status_and_url" | awk '{print $1}')
+          effective=$(echo "$status_and_url" | awk '{print $2}')
+          echo "HTTP status: $status (final URL: $effective)"
           if [ "$status" -ne 200 ]; then
             echo "Web Analytics script not reachable: $url (HTTP $status)"; exit 1
           fi
