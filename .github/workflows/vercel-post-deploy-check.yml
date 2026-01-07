@@ -1,0 +1,65 @@
+name: Vercel Post-Deploy Checks
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      site-url:
+        description: 'Production site URL (example: https://example.vercel.app)'
+        required: false
+
+jobs:
+  check-vercel-endpoints:
+    runs-on: ubuntu-latest
+    env:
+      SITE_URL: ${{ github.event.inputs.site-url || secrets.SITE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate SITE_URL
+        run: |
+          if [ -z "${SITE_URL}" ]; then
+            echo "ERROR: SITE_URL not set. Provide via workflow input 'site-url' or repository secret 'SITE_URL'."; exit 1
+          fi
+          echo "Checking site: ${SITE_URL}"
+
+      - name: Check Speed Insights script endpoint
+        run: |
+          set -e
+          url="${SITE_URL%/}/_vercel/speed-insights/script.js"
+          echo "Checking $url"
+          status=$(curl -s -o /dev/null -w "%{http_code}" "$url" || true)
+          echo "HTTP status: $status"
+          if [ "$status" -ne 200 ]; then
+            echo "Speed Insights script not reachable: $url (HTTP $status)"; exit 1
+          fi
+
+      - name: Check Web Analytics script endpoint
+        run: |
+          set -e
+          url="${SITE_URL%/}/_vercel/insights/script.js"
+          echo "Checking $url"
+          status=$(curl -s -o /dev/null -w "%{http_code}" "$url" || true)
+          echo "HTTP status: $status"
+          if [ "$status" -ne 200 ]; then
+            echo "Web Analytics script not reachable: $url (HTTP $status)"; exit 1
+          fi
+
+      - name: Run Speed Insights CLI
+        run: |
+          set -e
+          npx --yes @vercel/speed-insights "$SITE_URL" --json > speed-insights-report.json
+          echo "Speed Insights CLI finished"
+
+      - name: Upload Speed Insights report
+        uses: actions/upload-artifact@v4
+        with:
+          name: speed-insights-report
+          path: speed-insights-report.json
