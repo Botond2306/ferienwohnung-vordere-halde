@@ -58,14 +58,35 @@ jobs:
             echo "Web Analytics script not reachable: $url (HTTP $status)"; exit 1
           fi
 
-      - name: Run Speed Insights CLI
+      - name: Run Speed Insights CLI (with fallback)
         run: |
           set -e
-          npx --yes @vercel/speed-insights "$SITE_URL" --json > speed-insights-report.json
-          echo "Speed Insights CLI finished"
+          echo "Using npm version: $(npm --version)"
+          touch speed-insights-error.log
+          # Try using npm exec (recommended for npm 9/10)
+          if npm exec --yes @vercel/speed-insights -- "$SITE_URL" --json > speed-insights-report.json 2>>speed-insights-error.log; then
+            echo "Speed Insights CLI finished (npm exec)"
+          else
+            echo "npm exec failed, attempting to install @vercel/speed-insights and run via npx...";
+            npm install @vercel/speed-insights@latest --no-audit --no-fund
+            if npx --yes @vercel/speed-insights "$SITE_URL" --json > speed-insights-report.json 2>>speed-insights-error.log; then
+              echo "Speed Insights CLI finished (npx fallback)"
+            else
+              echo "Speed Insights CLI failed; check speed-insights-error.log for details";
+              cat speed-insights-error.log
+              exit 1
+            fi
+          fi
 
       - name: Upload Speed Insights report
         uses: actions/upload-artifact@v4
         with:
           name: speed-insights-report
           path: speed-insights-report.json
+
+      - name: Upload Speed Insights error log
+        if: failure() || always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: speed-insights-error-log
+          path: speed-insights-error.log
