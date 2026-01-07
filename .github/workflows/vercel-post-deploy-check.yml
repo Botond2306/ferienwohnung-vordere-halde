@@ -58,35 +58,60 @@ jobs:
             echo "Web Analytics script not reachable: $url (HTTP $status)"; exit 1
           fi
 
-      - name: Run Speed Insights CLI (with fallback)
+      - name: Run Speed Insights CLI (robust)
         run: |
-          set -e
+          set -euo pipefail
           echo "Using npm version: $(npm --version)"
-          touch speed-insights-error.log
-          # Try using npm exec (recommended for npm 9/10)
-          if npm exec --yes @vercel/speed-insights -- "$SITE_URL" --json > speed-insights-report.json 2>>speed-insights-error.log; then
-            echo "Speed Insights CLI finished (npm exec)"
+          rm -f speed-insights-report.json speed-insights-error.log || true
+
+          # Preferred invocation: download and run the package directly with npx -p
+          echo "Running: npx -y -p @vercel/speed-insights @vercel/speed-insights $SITE_URL --json"
+          if npx -y -p @vercel/speed-insights @vercel/speed-insights "$SITE_URL" --json > speed-insights-report.json 2>speed-insights-error.log; then
+            echo "Speed Insights CLI finished (npx -p)"
           else
-            echo "npm exec failed, attempting to install @vercel/speed-insights and run via npx...";
+            echo "Primary npx invocation failed, collecting diagnostics..."
+            echo "--- speed-insights-error.log ---"
+            cat speed-insights-error.log || true
+
+            echo "Listing node_modules and .bin"
+            ls -la || true
+            ls -la node_modules || true
+            ls -la node_modules/.bin || true
+            ls -la node_modules/@vercel/speed-insights || true
+
+            echo "Listing npm debug logs"
+            ls -la /home/runner/.npm/_logs || true
+            echo "--- printing recent npm debug log (if available) ---"
+            tail -n +1 /home/runner/.npm/_logs/*.log || true
+
+            echo "Attempting fallback: install package and run via npx"
             npm install @vercel/speed-insights@latest --no-audit --no-fund
-            if npx --yes @vercel/speed-insights "$SITE_URL" --json > speed-insights-report.json 2>>speed-insights-error.log; then
-              echo "Speed Insights CLI finished (npx fallback)"
+            if npx -y @vercel/speed-insights "$SITE_URL" --json > speed-insights-report.json 2>>speed-insights-error.log; then
+              echo "Speed Insights CLI finished (npx installed fallback)"
             else
-              echo "Speed Insights CLI failed; check speed-insights-error.log for details";
-              cat speed-insights-error.log
+              echo "All attempts failed; see artifacts for speed-insights-report.json and speed-insights-error.log"
               exit 1
             fi
           fi
 
       - name: Upload Speed Insights report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: speed-insights-report
           path: speed-insights-report.json
 
       - name: Upload Speed Insights error log
-        if: failure() || always()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: speed-insights-error-log
           path: speed-insights-error.log
+
+      - name: Upload npm debug logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-debug-logs
+          path: /home/runner/.npm/_logs/
+          if-no-files-found: warn
