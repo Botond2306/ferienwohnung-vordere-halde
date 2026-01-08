@@ -12,17 +12,22 @@ import Impressum from "./pages/Impressum";
 import NotFound from "./pages/NotFound";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Analytics } from "@vercel/analytics/react";
+import { useCookieConsent } from "@/hooks/useCookieConsent";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <SpeedInsights />
-      <Analytics />
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+const App = () => {
+  const { consent } = useCookieConsent();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        {/* Analytics/SpeedInsights only rendered if consent.analytics === true */}
+        {consent?.analytics ? <SpeedInsights /> : null}
+        {consent?.analytics ? <Analytics /> : null}
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
         <div className="flex flex-col min-h-screen">
           <Navigation />
           <main className="flex-grow">
@@ -38,7 +43,7 @@ const App = () => (
         </div>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
-);
-
+    </QueryClientProvider>
+  );
+};
 export default App;

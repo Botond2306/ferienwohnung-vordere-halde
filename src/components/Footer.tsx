@@ -39,6 +39,12 @@ const Footer = () => {
               <NavLink to="/impressum" className="hover:text-accent transition-colors">
                 Impressum
               </NavLink>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('cookie-consent-open'))}
+                className="text-sm mt-3 underline hover:text-accent"
+              >
+                Cookie‑Einstellungen
+              </button>
             </div>
           </div>
 
