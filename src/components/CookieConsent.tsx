@@ -65,10 +65,10 @@ const CookieConsent: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex gap-2 ms-auto">
-            <Button variant="outline" onClick={rejectAll}>Alle ablehnen</Button>
-            <Button variant="secondary" onClick={saveAndClose}>Speichern</Button>
-            <Button onClick={acceptAll}>Alle akzeptieren</Button>
+          <div className="flex flex-wrap gap-2 mt-4 md:mt-0 md:ms-auto">
+            <Button className="w-full md:w-auto" variant="outline" onClick={rejectAll}>Alle ablehnen</Button>
+            <Button className="w-full md:w-auto" variant="secondary" onClick={saveAndClose}>Speichern</Button>
+            <Button className="w-full md:w-auto" onClick={acceptAll}>Alle akzeptieren</Button>
           </div>
         </CardContent>
       </Card>
